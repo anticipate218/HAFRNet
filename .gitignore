@@ -1,0 +1,29 @@
+# Weights & large artefacts
+*.pth
+*.pt
+*.ckpt
+*.onnx
+
+# Datasets
+data/
+datasets/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Outputs / logs
+outputs*/
+runs/
+*.log
+wandb/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
