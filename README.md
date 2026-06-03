@@ -16,27 +16,6 @@ A fixed refinement trunk (SSDB at shallow stages, BCSMamba at deep stages, plus 
 
 ---
 
-## Results
-
-All numbers are mean IoU (%) under one identical protocol (single-scale, **no test-time augmentation** for SHARP-Net). SHARP-Net entries are the mean over three random-seed runs. Per-class IoU and mean IoU are mutually consistent (mIoU is the exact mean of the per-class IoU values).
-
-| Dataset | mIoU (%) | Standing |
-|---------|:--------:|----------|
-| ISPRS Vaihingen | 84.48 | strong 2nd (no TTA) |
-| ISPRS Potsdam | 88.20 | **1st** |
-| LoveDA (val) | 55.17 | close 2nd |
-| OpenEarthMap (val) | 67.70 | **1st** |
-
-**LoveDA per-class IoU (validation, EMA, verified from the training log):**
-
-| Background | Building | Road | Water | Barren | Forest | Agricultural | **mIoU** |
-|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| 52.32 | 60.16 | 58.80 | 70.38 | **39.80** | 42.67 | 62.05 | **55.17** |
-
-SHARP-Net delivers its clearest per-class gains on heterogeneous, low-texture rural classes (e.g. LoveDA *Barren*, well above competing methods) — precisely the classes the heterogeneity-guided fusion is designed for.
-
----
-
 ## Repository layout
 
 ```
@@ -47,7 +26,7 @@ SHARP-Net/
 └── ...                       # dataset wrappers, losses, eval utilities
 ```
 
-> Pretrained weights and datasets are **not** bundled in this repository (size / licensing). See the sections below for how to reproduce or where weights live.
+> Pretrained weights and datasets are **not** bundled in this repository (size / licensing). Pretrained weights are coming soon.
 
 ---
 
@@ -93,17 +72,14 @@ best checkpoint under `checkpoints/`.
 
 ## Pretrained weights
 
-The four best checkpoints are produced by the training runs above and saved as:
-
 | Dataset | Checkpoint |
 |---------|------------|
-| ISPRS Vaihingen | `outputs_vaihingen_sharpnet/checkpoints/SHARPNet_best.pth` (+ `SHARPNet_ema_best.pth`) |
-| ISPRS Potsdam | `outputs_potsdam_sharpnet/checkpoints/SHARPNet_best.pth` |
-| LoveDA | `outputs_loveda_sharpnet/checkpoints/SHARPNet_loveda_best.pth` |
-| OpenEarthMap | `outputs_oem_sharpnet/checkpoints/SHARPNet_best.pth` |
+| ISPRS Vaihingen | *Coming soon* |
+| ISPRS Potsdam | *Coming soon* |
+| LoveDA | *Coming soon* |
+| OpenEarthMap | *Coming soon* |
 
-> These files are large and are not committed here. They can be released as a
-> separate download (release asset / cloud storage) on request.
+> Pretrained weights will be released here soon.
 
 ---
 
@@ -120,22 +96,6 @@ On the two ISPRS benchmarks the five foreground classes are scored and the
 *Clutter/background* class is excluded, following the common ISPRS convention.
 
 ---
-
-## Citation
-
-If you find SHARP-Net useful, please cite the accompanying paper (details to be
-updated upon publication):
-
-```bibtex
-@article{sharpnet,
-  title   = {SHARP-Net: Stage-Adaptive Heterogeneity-Aware Refinement for
-             Very-High-Resolution Aerial Image Segmentation},
-  author  = {Cao, Shuaishuai and Tang, Meng and Peng, Shuwei and Huang, Min},
-  journal = {IEEE Transactions on Geoscience and Remote Sensing},
-  year    = {2026},
-  note    = {Under review}
-}
-```
 
 ## License
 
