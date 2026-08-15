@@ -39,7 +39,7 @@ Potsdam, LoveDA and OpenEarthMap.
 - **Identity-preserving refinement.** Zero-initialized gates, a frequency gain that starts at exactly one, and a residual scale that starts at exactly zero, so the first forward pass reproduces the baseline and the pretrained backbone is corrected only where it helps.
 - **Three modules, three error sources.** Each module targets one recurring failure mode of VHR segmentation rather than adding generic capacity.
 - **Matched-protocol evidence.** One Swin-B encoder, identical splits, schedule, augmentation and single-scale inference across all reported rows, so every margin is attributable to the decoding path.
-- **Consistent gains.** $+0.55$ to $+1.84$ pp mIoU over the strongest controlled decoder on four benchmarks, for $8.5$ M extra parameters and $11\%$ more GFLOPs.
+- **Consistent gains.** +0.55 to +1.84 pp mIoU over the strongest controlled decoder on four benchmarks, for 8.5 M extra parameters and 11% more GFLOPs than Swin-B + UPerNet.
 
 ## Method
 
