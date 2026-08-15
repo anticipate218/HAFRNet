@@ -1,47 +1,97 @@
-# SHARP-Net
+# HAFR-Net
 
-**S**tage-adaptive **H**eterogeneity-**A**ware **R**emote-sensing **P**arsing **Net**work for very-high-resolution (VHR) aerial image semantic segmentation.
+**Hierarchical Adaptive Feature Refinement Network for VHR Remote Sensing Image Segmentation**
 
-SHARP-Net is an *identity-preserving* parsing framework built on a Swin-Base encoder. It targets three recurring, **structured** sources of error in VHR aerial segmentation, and aligns one dedicated, near-identity-initialised module with each of them:
+HAFR-Net is a Swin-Base segmentation framework for very-high-resolution (VHR) aerial
+imagery. It follows one design principle: the pretrained encoder is *refined*, not
+replaced. Every added branch starts at (or close to) the identity map, so each stage
+acts as a bounded residual correction to the pretrained features rather than as a
+parallel branch learned from scratch, which keeps fine-tuning stable on the
+relatively small VHR datasets.
+
+Three refinement stages are aligned one-to-one with three recurring, structured
+sources of error:
 
 | Challenge | Module | What it does |
-|-----------|--------|--------------|
-| **C1** Optimal decoding scale varies spatially within a tile | **HG-SAF** — Heterogeneity-Guided Stage-Adaptive Fusion | Predicts *per-pixel* softmax weights over the four encoder stages, conditioned on a deep-feature heterogeneity map. Edges/small objects route to shallow high-resolution cues; homogeneous interiors route to deep semantics. |
-| **C2** Repeated downsampling attenuates high-frequency detail | **FRA** — Frequency-Residual Adapter | A bounded, low-rank, identity-initialised residual FFT branch (`gate = 1 + α·tanh(·)`, output scaled by a learnable `γ` initialised to 0) that restores high-frequency content without destabilising the pretrained backbone. |
-| **C3** Errors concentrate in a few confusable class pairs | **CATP** — Confusion-Aware Tri-Prior decoder | Three orthogonal auxiliary priors: a boundary prior, a small-object prior, and a prototype-contrast prior on pre-declared confusion pairs. |
+|---|---|---|
+| **C1** The best decoding scale varies from pixel to pixel inside one tile | **HG-SAF** — Heterogeneity-Guided Stage-Adaptive Fusion | Predicts per-pixel softmax weights over the four encoder stages, conditioned on a local feature-heterogeneity statistic. The gate is zero-initialized, so fusion starts as the plain mean of the projected stages. |
+| **C2** Repeated downsampling attenuates high-frequency detail | **FRA** — Frequency-Residual Adapter | A residual rFFT branch inside a channel bottleneck, with a tanh-bounded per-coefficient gain (`g = 1 + alpha * tanh(...)`, `alpha = 0.5`) and a learnable residual scale initialized to zero, so the first forward pass is an exact identity. |
+| **C3** Errors concentrate in a few confusable class pairs | **CATP** — Confusion-Aware Tri-Prior decoder | Three auxiliary structural signals: a boundary prior, an objectness prior, and a prototype-contrast term on a relation set of class pairs frozen from a training-only pilot split. |
 
-A fixed refinement trunk (SSDB at shallow stages, BCSMamba at deep stages, plus an SOE small-object block) sits between the encoder and the three contribution modules. The trunk is a strong but **fixed** feature extractor and is *not* part of the claimed contributions.
-
-> **Design principle — identity at initialisation.** Every new branch is the identity map at step 0 (zero-initialised gate / `γ = 0` residual / near-identity boundary attention). Each module therefore behaves as a *residual correction* to the pretrained features rather than a parallel branch learned from scratch, which keeps fine-tuning stable on relatively small VHR datasets.
+A fixed preparation stage sits between the encoder and the three refinement stages:
+SSDB (Spectral-Spatial Decoupled Block) at the two high-resolution stages,
+BCS-Mamba (Bi-directional Cross-Scan Mamba) at the two low-resolution stages, and an
+SOE (Small Object Enhancement) block on the fused path. The preparation stage is a
+strong but **fixed** feature extractor and is measured separately rather than claimed
+as a contribution.
 
 ---
 
-## Repository layout
+## Results
 
-```
-SHARP-Net/
-├── README.md                 # this file
-├── sharpnet.py               # core SHARP-Net model (HG-SAF, FRA, CATP, trunk)
-├── train_sharpnet_unified.py # unified training entry point
-└── ...                       # dataset wrappers, losses, eval utilities
+Matched protocol: one Swin-B encoder, identical splits, schedule, augmentation and
+single-scale inference for every entry, so a row difference is a difference in the
+decoding path.
+
+| Dataset | mIoU (%) | With flip+rotation TTA |
+|---|:---:|:---:|
+| ISPRS Vaihingen | 84.12 | 84.48 |
+| ISPRS Potsdam | 87.86 | 88.20 |
+| LoveDA (official val) | 55.17 | — |
+| OpenEarthMap | 67.70 | — |
+
+Published-result tables for the same benchmarks are reported in the paper as
+literature context, since backbones and inference settings differ across sources.
+
+---
+
+## Pretrained weights
+
+Weights are attached to the [Releases](https://github.com/anticipate218/HAFRNet/releases)
+page, not tracked in the repository.
+
+| Dataset | Checkpoint | val mIoU |
+|---|---|:---:|
+| LoveDA | [`HAFRNet_loveda_best.pth`](https://github.com/anticipate218/HAFRNet/releases/tag/weights-loveda-v1) | **55.17** |
+| ISPRS Vaihingen | *coming soon* | — |
+| ISPRS Potsdam | *coming soon* | — |
+| OpenEarthMap | *coming soon* | — |
+
+Loading:
+
+```python
+import torch
+
+ck = torch.load("HAFRNet_loveda_best.pth", map_location="cpu")
+print(ck["best_miou"], ck["best_is_ema"])   # 0.5517  True
+model.load_state_dict(ck["model_state_dict"])
+model.eval()
 ```
 
-> Pretrained weights and datasets are **not** bundled in this repository (size / licensing). Pretrained weights are coming soon.
+The archive stores five keys: `model_state_dict`, `best_miou`, `best_is_ema`,
+`epoch`, and `history` (per-epoch `val_miou`, `val_class_iou` and their EMA
+variants). The LoveDA entry is the **EMA shadow weights**, which is the setting the
+LoveDA number is reported under.
+
+Top-level keys of the state dict, if you want to load the stages individually:
+`_swin_full`, `ssdb_stages`, `mamba_stages`, `proj_pre`, `hg_saf`, `fra`, `soe`,
+`decoder`, `aux_heads`. The `aux_heads` entries are deep-supervision heads used only
+during training.
 
 ---
 
 ## Installation
 
 ```bash
-# Python 3.10+, CUDA-capable GPU recommended (training used a single RTX-4090)
+# Python 3.10+, CUDA-capable GPU (training used a single RTX 4090)
 pip install torch torchvision        # match your CUDA version
 pip install timm numpy opencv-python pillow tqdm
-# Mamba scan (for the deep-stage BCSMamba refinement)
-pip install mamba-ssm
+pip install mamba-ssm                # for the BCS-Mamba preparation stages
 ```
 
 The backbone is the `timm` Swin-B checkpoint
-`swin_base_patch4_window12_384.ms_in22k_ft_in1k` (ImageNet-22k pretrained, ImageNet-1k fine-tuned), downloaded automatically by `timm`.
+`swin_base_patch4_window12_384.ms_in22k_ft_in1k` (ImageNet-22k pretrained,
+ImageNet-1k fine-tuned), downloaded automatically by `timm`.
 
 ---
 
@@ -50,50 +100,51 @@ The backbone is the `timm` Swin-B checkpoint
 ### Training
 
 ```bash
-python train_sharpnet_unified.py --dataset loveda     --data_root /path/to/LoveDA
-python train_sharpnet_unified.py --dataset potsdam    --data_root /path/to/Potsdam
-python train_sharpnet_unified.py --dataset vaihingen  --data_root /path/to/Vaihingen
-python train_sharpnet_unified.py --dataset oem        --data_root /path/to/OpenEarthMap
+python train_sharpnet_unified.py --dataset loveda    --data_root /path/to/LoveDA
+python train_sharpnet_unified.py --dataset potsdam   --data_root /path/to/Potsdam
+python train_sharpnet_unified.py --dataset vaihingen --data_root /path/to/Vaihingen
+python train_sharpnet_unified.py --dataset oem       --data_root /path/to/OpenEarthMap
 ```
 
-Key settings used in the paper: BFloat16 mixed precision (FRA's FFTs kept in FP32),
-AdamW with differential learning rates (`lr_backbone = lr_head / 3`), cosine
-annealing, batch size 8, gradient clipping at L2-norm 1, 80 epochs. LoveDA uses a
-stronger "Route-B" recipe (CutMix + Mosaic, 3-epoch linear warmup, EMA shadow model
-with decay 0.9995); the reported LoveDA number is the EMA mIoU.
+Settings used in the paper: BF16 mixed precision with the spectral FFTs kept in FP32,
+AdamW with a backbone learning rate one third of the head rate, cosine annealing,
+batch size 8, gradient clipping at L2 norm 1. LoveDA additionally uses CutMix and
+Mosaic, a 3-epoch linear warm-up, and an EMA shadow model with decay 0.9995; the
+reported LoveDA number is the EMA mIoU.
 
 ### Evaluation
 
-Each training run writes a `history.json` containing per-epoch `val_miou`,
-`val_class_iou` (and their EMA variants) plus the best-epoch summary, and saves the
-best checkpoint under `checkpoints/`.
-
----
-
-## Pretrained weights
-
-| Dataset | Checkpoint |
-|---------|------------|
-| ISPRS Vaihingen | *Coming soon* |
-| ISPRS Potsdam | *Coming soon* |
-| LoveDA | *Coming soon* |
-| OpenEarthMap | *Coming soon* |
-
-> Pretrained weights will be released here soon.
+Each run writes `history.json` with per-epoch `val_miou` and `val_class_iou` (plus
+their EMA variants) and saves the best checkpoint under `checkpoints/`.
 
 ---
 
 ## Datasets
 
 | Dataset | Classes | GSD | Notes |
-|---------|:-------:|-----|-------|
+|---|:---:|---|---|
 | [ISPRS Vaihingen](https://www.isprs.org/education/benchmarks/UrbanSemLab/) | 6 (5 scored) | 9 cm | IR-R-G |
 | [ISPRS Potsdam](https://www.isprs.org/education/benchmarks/UrbanSemLab/) | 6 (5 scored) | 5 cm | R-G-B |
-| [LoveDA](https://github.com/Junjue-Wang/LoveDA) | 7 | 30 cm | urban + rural |
-| [OpenEarthMap](https://open-earth-map.org/) | 8 | 25–50 cm | globally distributed |
+| [LoveDA](https://github.com/Junjue-Wang/LoveDA) | 7 | 30 cm | urban and rural |
+| [OpenEarthMap](https://open-earth-map.org/) | 8 | 25-50 cm | globally distributed |
 
-On the two ISPRS benchmarks the five foreground classes are scored and the
-*Clutter/background* class is excluded, following the common ISPRS convention.
+On the two ISPRS benchmarks the five foreground classes are scored, *Clutter* is
+excluded, and the official 3-px boundary erosion is applied.
+
+---
+
+## Citation
+
+```bibtex
+@article{cao2026hafrnet,
+  title   = {Hierarchical Adaptive Feature Refinement Network for VHR Remote Sensing Image Segmentation},
+  author  = {Cao, Shuaishuai and Tang, Meng and Peng, Shuwei and Liu, Xuan and Huang, Min
+             and Chen, Jie and Niu, Jiacheng and Chen, Yong and Akpokodje, Edore and Lin, Hui},
+  journal = {IEEE Transactions on Geoscience and Remote Sensing},
+  year    = {2026},
+  note    = {Under review}
+}
+```
 
 ---
 
