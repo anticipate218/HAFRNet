@@ -106,11 +106,15 @@ python train_sharpnet_unified.py --dataset vaihingen --data_root /path/to/Vaihin
 python train_sharpnet_unified.py --dataset oem       --data_root /path/to/OpenEarthMap
 ```
 
-Settings used in the paper: BF16 mixed precision with the spectral FFTs kept in FP32,
-AdamW with a backbone learning rate one third of the head rate, cosine annealing,
-batch size 8, gradient clipping at L2 norm 1. LoveDA additionally uses CutMix and
-Mosaic, a 3-epoch linear warm-up, and an EMA shadow model with decay 0.9995; the
-reported LoveDA number is the EMA mIoU.
+Settings used in the paper: 512x512 crops with train and test stride 256, at most 80
+epochs at batch size 8, AdamW with head learning rate 1.2e-4 and backbone learning
+rate 4e-5, a cosine schedule with a 5-epoch warm-up, weight decay 1e-4, gradient
+clipping at L2 norm 1, and BF16 mixed precision with the spectral FFTs kept in FP32.
+Augmentation is horizontal or vertical flip and discrete 90-degree rotation. LoveDA is
+the only dataset with a stronger photometric recipe: colour jitter 0.4, Gaussian blur
+0.3, an EMA shadow model with decay 0.999, and early stopping with patience 12; its
+reported number is the EMA mIoU. Seeds are 42, 43 and 44, and the kept checkpoint is
+the one with the best validation mIoU.
 
 ### Evaluation
 
