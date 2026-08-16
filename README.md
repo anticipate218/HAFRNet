@@ -21,10 +21,12 @@
 
 This repository is the official implementation of **HAFR-Net**, a Swin-Base framework for semantic
 segmentation of very-high-resolution (VHR) aerial imagery. HAFR-Net *refines* a pretrained encoder
-instead of replacing it: every added branch is initialized at, or close to, the identity map, so each
-refinement stage acts as a bounded residual correction and fine-tuning stays stable on the relatively
-small VHR benchmarks. It reaches **84.48 / 88.20 / 55.17 / 67.70** mIoU on ISPRS Vaihingen, ISPRS
-Potsdam, LoveDA and OpenEarthMap.
+instead of replacing it with a monolithic decoder: the encoder hierarchy passes three sequential
+refinement stages, each of which starts from a conservative state, so the added capacity behaves as a
+bounded correction and fine-tuning stays stable on the relatively small VHR benchmarks. Under a
+matched Swin-B protocol with single-scale inference it reaches **84.12 / 87.86 / 55.17 / 67.70** mIoU
+on ISPRS Vaihingen, ISPRS Potsdam, LoveDA and OpenEarthMap (**84.48 / 88.20** on the two ISPRS sets
+with flip/rotation TTA).
 
 ## News
 
@@ -33,23 +35,51 @@ Potsdam, LoveDA and OpenEarthMap.
 
 ## Highlights
 
-- **Identity-preserving refinement.** Zero-initialized gates, a frequency gain that starts at exactly one, and a residual scale that starts at exactly zero, so the first forward pass reproduces the baseline and the pretrained backbone is corrected only where it helps.
-- **Three modules, three error sources.** Each module targets one recurring failure mode of VHR segmentation rather than adding generic capacity.
-- **Matched-protocol evidence.** One Swin-B encoder, identical splits, schedule, augmentation and single-scale inference across all reported rows, so every margin is attributable to the decoding path.
-- **Consistent gains.** +0.55 to +1.84 pp mIoU over the strongest controlled decoder on four benchmarks, for 8.5 M extra parameters and 11% more GFLOPs than Swin-B + UPerNet.
+- **Progressive refinement of a pretrained hierarchy.** Three sequential stages with distinct roles &mdash; dense stage adaptation, bounded spectral correction, structure and class-relation regularization &mdash; instead of one unconstrained task-specific decoder.
+- **Conservative initialization.** The fusion gate starts at uniform 1/4 weights (exactly the mean-fusion baseline), the spectral branch starts at an exact residual identity, and the boundary feedback starts at a small residual coefficient. The three behaviours are stated separately rather than merged into one identity claim.
+- **Matched-protocol evidence.** One Swin-B encoder, identical splits, schedule, augmentation, deep supervision and single-scale inference across all reported rows, so every margin is attributable to the decoding path.
+- **Consistent gains.** +0.55 to +1.84 pp mIoU over the matched UPerNet reference on four benchmarks (+0.33 to +1.52 pp over the strongest alternative decoder), for 8.5 M extra parameters and 11% more GFLOPs.
+- **Fully reported cost.** 97.8 M parameters, 131.2 GFLOPs, 24.8 ms latency and 40.3 FPS at 512&times;512 under one timing protocol, and the fixed preparation blocks are measured separately rather than folded into the margin.
 
 ## Method
 
-| | Challenge | Module | Design |
-|:--:|---|---|---|
-| **C1** | The optimal decoding scale varies from pixel to pixel inside one tile | **HG-SAF**<br>Heterogeneity-Guided Stage-Adaptive Fusion | Per-pixel softmax weights over the four encoder stages, conditioned on a local feature-heterogeneity statistic. The gate is zero-initialized, so fusion starts as the plain mean of the projected stages. |
-| **C2** | Repeated downsampling attenuates high-frequency detail | **FRA**<br>Frequency-Residual Adapter | A residual rFFT branch inside a channel bottleneck with a tanh-bounded per-coefficient gain (`g = 1 + alpha * tanh(.)`, `alpha = 0.5`) and a learnable residual scale initialized to zero, making the first forward pass an exact identity. |
-| **C3** | Errors concentrate in a few confusable class pairs | **CATP**<br>Confusion-Aware Tri-Prior decoder | Boundary prior, objectness prior, and a prototype-contrast term on a relation set of class pairs frozen from a training-only pilot split. Pairwise confusion mass on those pairs drops by 23&ndash;28%. |
+```mermaid
+flowchart LR
+  IMG["Image<br/>512 x 512"] --> ENC["Swin-B encoder<br/>4 hierarchical stages"]
+  ENC --> PREP["Stage preparation<br/>SSDB &middot; BCS-Mamba<br/>fixed, not claimed"]
+  PREP --> S1["1 &middot; HG-SAF<br/>dense stage weights"]
+  S1 --> S2["2 &middot; FRA<br/>bounded spectral residual"]
+  S2 --> S3["3 &middot; CATP<br/>tri-prior decoding"]
+  S3 --> OUT["Segmentation map"]
+  classDef fixed fill:#f3f4f6,stroke:#c9ced6,color:#333;
+  classDef stage fill:#eaf2fb,stroke:#7ea6d8,color:#14385e;
+  classDef io fill:#ffffff,stroke:#c9ced6,color:#333;
+  class IMG,OUT io;
+  class ENC,PREP fixed;
+  class S1,S2,S3 stage;
+```
 
-A **fixed** preparation trunk sits between the encoder and the three refinement stages: SSDB
-(Spectral-Spatial Decoupled Block) at the two high-resolution stages, BCS-Mamba (Bi-directional
-Cross-Scan Mamba) at the two low-resolution stages, and an SOE (Small Object Enhancement) block on
-the fused path. It is measured separately in the paper rather than claimed as a contribution.
+HAFR-Net keeps the pretrained hierarchy and refines it progressively. Each stage has one role, and
+each begins close to the representation it refines.
+
+| # | Refinement stage | What it does | State at step 0 |
+|:--:|---|---|---|
+| **1** | **HG-SAF**<br>Heterogeneity-Guided<br>Stage-Adaptive Fusion | Predicts per-pixel softmax weights over the four prepared encoder stages from a local feature-heterogeneity statistic, so the decoding scale can vary inside a single tile. | Gate projection = 0 &rarr; uniform 1/4 fusion, i.e. exactly the mean-fusion baseline |
+| **2** | **FRA**<br>Frequency-Residual<br>Adapter | Corrects the fused feature in the spectrum instead of replacing it: a residual rFFT branch in a channel bottleneck with a tanh-bounded per-coefficient gain (`g = 1 + alpha * tanh(.)`, `alpha = 0.5`). | Residual scale `gamma = 0` &rarr; exact identity w.r.t. the fused feature |
+| **3** | **CATP**<br>Confusion-Aware<br>Tri-Prior Decoder | Decodes under boundary, objectness and prototype-contrast priors, the last on a class-pair relation set frozen from a training-only pilot split. Only the semantic head runs at inference. | Boundary feedback `beta_e = 0.05` &rarr; a small residual, not an identity |
+
+**Measured behaviour.** HG-SAF gains +1.57 pp mIoU in the highest heterogeneity quartile and
++1.52 pp on small objects, against +0.19 pp on large objects. FRA is the best variant on all five
+accuracy metrics against matched spatial and spectral alternatives at the same insertion point,
+including a zero-init GFNet mixer. CATP reduces confusion mass on the pre-declared class pairs by
+23&ndash;28%.
+
+**Not claimed as contributions.** A fixed preparation trunk sits between the encoder and the three
+refinement stages: SSDB (Spectral-Spatial Decoupled Block) at the two high-resolution stages,
+BCS-Mamba (Bi-directional Cross-Scan Mamba) at the two low-resolution stages, and an SOE (Small
+Object Enhancement) block on the fused path. They are held identical in every module study and
+measured on their own: +0.22 pp of the +0.55 pp Vaihingen margin, with the remaining +0.33 pp
+attributable to the three refinement stages.
 
 ## Results
 
@@ -67,8 +97,11 @@ inference for every entry.
 
 </div>
 
-Published results for the same benchmarks are tabulated in the paper as literature context only,
-since backbones and inference settings differ across sources.
+Margins over the matched UPerNet reference are +0.55, +0.95, +1.55 and +1.84 pp, with paired
+bootstrap 95% confidence intervals of [0.31, 0.79], [0.66, 1.22], [1.18, 1.91] and [1.47, 2.19] pp
+over the evaluation patches; all four exclude zero. Every entry is the mean over seeds 42, 43 and 44.
+Published results for the same benchmarks appear in the paper as literature context only, since
+backbones and inference settings differ across sources.
 
 ## Model Zoo
 
@@ -159,10 +192,12 @@ python train_hafrnet_unified.py --dataset loveda    --data_root /path/to/LoveDA
 python train_hafrnet_unified.py --dataset oem       --data_root /path/to/OpenEarthMap
 ```
 
-512&times;512 crops with train and test stride 256; at most 80 epochs at batch size 8; AdamW with head
-learning rate 1.2e-4 and backbone learning rate 4e-5; cosine schedule with a 5-epoch warm-up; weight
-decay 1e-4; gradient clipping at L2 norm 1; BF16 mixed precision with the spectral FFTs in FP32.
-Augmentation is horizontal or vertical flip plus discrete 90&deg; rotation.
+Every image enters the network at 512&times;512 (the ISPRS tiles are held as non-overlapping
+1024&times;1024 patches and resampled, labels by nearest neighbour); at most 80 epochs at batch size 8;
+AdamW with head learning rate 1.2e-4 and backbone learning rate 4e-5; cosine schedule with a 5-epoch
+warm-up; weight decay 1e-4; gradient clipping at L2 norm 1; BF16 mixed precision with the spectral
+FFTs in FP32. Augmentation is horizontal or vertical flip plus discrete 90&deg; rotation, each with
+probability 0.5. No CRF, multi-crop merging or other post-processing is applied.
 
 LoveDA adds a stronger photometric recipe on top: colour jitter 0.4, Gaussian blur 0.3, an EMA shadow
 model with decay 0.999, and early stopping with patience 12; its reported number is the EMA mIoU.
