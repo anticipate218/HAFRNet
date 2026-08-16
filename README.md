@@ -46,10 +46,10 @@ with flip/rotation TTA).
 ```mermaid
 flowchart LR
   IMG["Image<br/>512 x 512"] --> ENC["Swin-B encoder<br/>4 hierarchical stages"]
-  ENC --> PREP["Stage preparation<br/>SSDB &middot; BCS-Mamba<br/>fixed, not claimed"]
-  PREP --> S1["1 &middot; HG-SAF<br/>dense stage weights"]
-  S1 --> S2["2 &middot; FRA<br/>bounded spectral residual"]
-  S2 --> S3["3 &middot; CATP<br/>tri-prior decoding"]
+  ENC --> PREP["Stage preparation<br/>SSDB + BCS-Mamba<br/>fixed, not claimed"]
+  PREP --> S1["Stage 1: HG-SAF<br/>dense stage weights"]
+  S1 --> S2["Stage 2: FRA<br/>bounded spectral residual"]
+  S2 --> S3["Stage 3: CATP<br/>tri-prior decoding"]
   S3 --> OUT["Segmentation map"]
   classDef fixed fill:#f3f4f6,stroke:#c9ced6,color:#333;
   classDef stage fill:#eaf2fb,stroke:#7ea6d8,color:#14385e;
