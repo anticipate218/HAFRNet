@@ -7,8 +7,9 @@
 <sub>Official implementation &nbsp;&middot;&nbsp; IEEE TGRS (under review)</sub>
 
 <p>
-<a href="#citation"><img alt="Paper" src="https://img.shields.io/badge/paper-IEEE%20TGRS%20(under%20review)-00629B?style=flat-square"></a>
-<a href="https://github.com/anticipate218/HAFRNet/releases/tag/weights-loveda-v1"><img alt="Weights" src="https://img.shields.io/badge/weights-LoveDA-2ea44f?style=flat-square"></a>
+<a href="#-citation"><img alt="Paper" src="https://img.shields.io/badge/paper-IEEE%20TGRS%20(under%20review)-00629B?style=flat-square"></a>
+<a href="https://github.com/anticipate218/HAFRNet/releases/tag/weights-loveda-v1"><img alt="Weights" src="https://img.shields.io/badge/weights-LoveDA%20released-2ea44f?style=flat-square&logo=pytorch&logoColor=white"></a>
+<a href="https://github.com/anticipate218/HAFRNet/releases"><img alt="Release" src="https://img.shields.io/github/v/release/anticipate218/HAFRNet?style=flat-square&color=ff6b35&label=latest"></a>
 <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-3776AB?style=flat-square">
 <img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-1.13%2B-EE4C2C?style=flat-square">
 <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-lightgrey?style=flat-square"></a>
@@ -28,12 +29,12 @@ matched Swin-B protocol with single-scale inference it reaches **84.12 / 87.86 /
 on ISPRS Vaihingen, ISPRS Potsdam, LoveDA and OpenEarthMap (**84.48 / 88.20** on the two ISPRS sets
 with flip/rotation TTA).
 
-## News
+## 🔥 News
 
-- **2026-08** &nbsp;LoveDA best checkpoint released &mdash; [`weights-loveda-v1`](https://github.com/anticipate218/HAFRNet/releases/tag/weights-loveda-v1) (val mIoU 55.17).
+- **2026-08** &nbsp;🔥 **New** &nbsp;LoveDA best checkpoint released &mdash; [`weights-loveda-v1`](https://github.com/anticipate218/HAFRNet/releases/tag/weights-loveda-v1) (val mIoU 55.17).
 - **2026-08** &nbsp;Manuscript submitted to *IEEE Transactions on Geoscience and Remote Sensing*; this repository is now public.
 
-## Highlights
+## ✨ Highlights
 
 - **Progressive refinement of a pretrained hierarchy.** Three sequential stages with distinct roles &mdash; dense stage adaptation, bounded spectral correction, structure and class-relation regularization &mdash; instead of one unconstrained task-specific decoder.
 - **Conservative initialization.** The fusion gate starts at uniform 1/4 weights (exactly the mean-fusion baseline), the spectral branch starts at an exact residual identity, and the boundary feedback starts at a small residual coefficient. The three behaviours are stated separately rather than merged into one identity claim.
@@ -41,23 +42,13 @@ with flip/rotation TTA).
 - **Consistent gains.** +0.55 to +1.84 pp mIoU over the matched UPerNet reference on four benchmarks (+0.33 to +1.52 pp over the strongest alternative decoder), for 8.5 M extra parameters and 11% more GFLOPs.
 - **Fully reported cost.** 97.8 M parameters, 131.2 GFLOPs, 24.8 ms latency and 40.3 FPS at 512&times;512 under one timing protocol, and the fixed preparation blocks are measured separately rather than folded into the margin.
 
-## Method
+## 🧩 Method
 
-```mermaid
-flowchart LR
-  IMG["Image<br/>512 x 512"] --> ENC["Swin-B encoder<br/>4 hierarchical stages"]
-  ENC --> PREP["Stage preparation<br/>SSDB + BCS-Mamba<br/>fixed, not claimed"]
-  PREP --> S1["Stage 1: HG-SAF<br/>dense stage weights"]
-  S1 --> S2["Stage 2: FRA<br/>bounded spectral residual"]
-  S2 --> S3["Stage 3: CATP<br/>tri-prior decoding"]
-  S3 --> OUT["Segmentation map"]
-  classDef fixed fill:#f3f4f6,stroke:#c9ced6,color:#333;
-  classDef stage fill:#eaf2fb,stroke:#7ea6d8,color:#14385e;
-  classDef io fill:#ffffff,stroke:#c9ced6,color:#333;
-  class IMG,OUT io;
-  class ENC,PREP fixed;
-  class S1,S2,S3 stage;
-```
+<div align="center">
+
+**Swin-B encoder** &rarr; *stage preparation (fixed)* &rarr; **1 &middot; HG-SAF** &rarr; **2 &middot; FRA** &rarr; **3 &middot; CATP** &rarr; **mask**
+
+</div>
 
 HAFR-Net keeps the pretrained hierarchy and refines it progressively. Each stage has one role, and
 each begins close to the representation it refines.
@@ -81,7 +72,7 @@ Object Enhancement) block on the fused path. They are held identical in every mo
 measured on their own: +0.22 pp of the +0.55 pp Vaihingen margin, with the remaining +0.33 pp
 attributable to the three refinement stages.
 
-## Results
+## 📊 Results
 
 Matched protocol: one Swin-B encoder, identical splits, schedule and augmentation, single-scale
 inference for every entry.
@@ -103,7 +94,7 @@ over the evaluation patches; all four exclude zero. Every entry is the mean over
 Published results for the same benchmarks appear in the paper as literature context only, since
 backbones and inference settings differ across sources.
 
-## Model Zoo
+## 📦 Model Zoo
 
 <div align="center">
 
@@ -134,7 +125,7 @@ weights**, the setting the LoveDA number is reported under. Top-level keys of th
 `_swin_full`, `ssdb_stages`, `mamba_stages`, `proj_pre`, `hg_saf`, `fra`, `soe`, `decoder` and
 `aux_heads`; the `aux_heads` tensors are deep-supervision heads used during training only.
 
-## Visualizations
+## 🖼️ Visualizations
 
 <details open>
 <summary><b>ISPRS Vaihingen and Potsdam</b></summary>
@@ -157,7 +148,7 @@ weights**, the setting the LoveDA number is reported under. Top-level keys of th
 <sub>Boxes mark <i>Rangeland</i>&nbsp;&harr;&nbsp;<i>Agriculture</i> transitions and thin roads, the pair with the largest confusion-mass reduction from CATP.</sub>
 </details>
 
-## Getting Started
+## 🚀 Getting Started
 
 ### Installation
 
@@ -208,7 +199,7 @@ Seeds are 42, 43 and 44, and the kept checkpoint is the one with the best valida
 Each run writes `history.json` with per-epoch `val_miou` and `val_class_iou` (plus the EMA variants)
 and saves the best checkpoint under `checkpoints/`.
 
-## TODO
+## 🗺️ Roadmap
 
 - [x] LoveDA best checkpoint
 - [ ] Training and evaluation code &mdash; *upon acceptance*
@@ -216,7 +207,7 @@ and saves the best checkpoint under `checkpoints/`.
 - [ ] Configuration files reproducing every table of the paper
 - [ ] Architecture figure and module diagrams
 
-## Citation
+## 📝 Citation
 
 ```bibtex
 @article{hafrnet2026,
@@ -228,18 +219,18 @@ and saves the best checkpoint under `checkpoints/`.
 }
 ```
 
-## Acknowledgement
+## 🙏 Acknowledgement
 
 Built on [`timm`](https://github.com/huggingface/pytorch-image-models) for the Swin-B backbone, and on
 the public ISPRS, [LoveDA](https://github.com/Junjue-Wang/LoveDA) and
 [OpenEarthMap](https://open-earth-map.org/) benchmarks. We thank the teams that maintain these
 datasets.
 
-## License
+## ⚖️ License
 
 Released under the [MIT License](LICENSE) for academic research use.
 
-## Contact
+## 💬 Contact
 
 Questions are welcome through the
 [issue tracker](https://github.com/anticipate218/HAFRNet/issues). Correspondence details will be
