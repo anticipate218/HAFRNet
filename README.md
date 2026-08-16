@@ -4,10 +4,7 @@
 
 ### Hierarchical Adaptive Feature Refinement Network<br>for VHR Remote Sensing Image Segmentation
 
-Shuaishuai Cao, Meng Tang, Shuwei Peng, Xuan Liu, [Min Huang](mailto:huangm@jxnu.edu.cn)<sup>&#9993;</sup>,<br>
-Jie Chen, Jiacheng Niu, Yong Chen, Edore Akpokodje, Hui Lin
-
-<sub>Jiangxi Normal University &nbsp;&middot;&nbsp; Aberystwyth University &nbsp;&middot;&nbsp; Central South University</sub>
+<sub>Official implementation &nbsp;&middot;&nbsp; IEEE TGRS (under review)</sub>
 
 <p>
 <a href="#citation"><img alt="Paper" src="https://img.shields.io/badge/paper-IEEE%20TGRS%20(under%20review)-00629B?style=flat-square"></a>
@@ -187,14 +184,12 @@ and saves the best checkpoint under `checkpoints/`.
 ## Citation
 
 ```bibtex
-@article{cao2026hafrnet,
+@article{hafrnet2026,
   title   = {Hierarchical Adaptive Feature Refinement Network for VHR Remote Sensing
              Image Segmentation},
-  author  = {Cao, Shuaishuai and Tang, Meng and Peng, Shuwei and Liu, Xuan and Huang, Min
-             and Chen, Jie and Niu, Jiacheng and Chen, Yong and Akpokodje, Edore and Lin, Hui},
   journal = {IEEE Transactions on Geoscience and Remote Sensing},
   year    = {2026},
-  note    = {Under review}
+  note    = {Under review; the full bibliographic record will be added upon publication}
 }
 ```
 
@@ -211,5 +206,6 @@ Released under the [MIT License](LICENSE) for academic research use.
 
 ## Contact
 
-Questions and issues are welcome. For anything beyond the issue tracker, contact
-[huangm@jxnu.edu.cn](mailto:huangm@jxnu.edu.cn).
+Questions are welcome through the
+[issue tracker](https://github.com/anticipate218/HAFRNet/issues). Correspondence details will be
+added once the paper is published.
